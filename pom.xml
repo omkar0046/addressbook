@@ -105,7 +105,7 @@
         <repository>
             <id>maven-snapshots</id> <!-- Replace with your repository ID -->
             <name>addressbook</name>
-            <url>http://3.137.187.156:8081/repository/maven-snapshots/</url> <!-- Replace with your actual URL -->
+            <url>http://52.14.76.146:8081/repository/maven-snapshots/</url> <!-- Replace with your actual URL -->
         </repository>
     </distributionManagement>
 

@@ -5,8 +5,8 @@ pipeline {
         SCANNER_HOME      = tool 'SonarScanner'
 
         MASTER_IP         = '98.81.97.26'
-        NEXUS_URL         = "http://98.81.97.26:8081/repository/maven-central/"
-        NEXUS_REPO        = 'maven-central'
+        NEXUS_URL         = "http://98.81.97.26:8081/repository/maven-snapshots/"
+        NEXUS_REPO        = 'maven-snapshots'
 
         IMAGE_NAME        = 'myapp'
         IMAGE_TAG         = "${env.BUILD_NUMBER}-${env.GIT_COMMIT ? env.GIT_COMMIT.take(7) : 'latest'}"

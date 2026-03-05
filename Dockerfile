@@ -1,7 +1,8 @@
 FROM eclipse-temurin:17-jre-alpine
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY target/*.jar app.jar
+#COPY target/*.jar app.jar
+COPY target/*.war app.war
 RUN chown -R appuser:appgroup /app
 USER appuser
 EXPOSE 8080

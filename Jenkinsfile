@@ -2,34 +2,27 @@ pipeline {
     agent any
 
     environment {
-        SCANNER_HOME      = tool 'SonarScanner'
+        SCANNER_HOME = tool 'SonarScanner'
 
-        MASTER_IP         = '98.81.97.26'
-        NEXUS_URL         = "http://98.81.97.26:8081/repository/maven-snapshots/"
-        NEXUS_REPO        = 'maven-snapshots'
+        DOCKER_REGISTRY = "98.81.97.26:8081"
+        DOCKER_REPO     = "docker-hosted"
 
-        IMAGE_NAME        = 'myapp'
-        IMAGE_TAG         = "${env.BUILD_NUMBER}-${env.GIT_COMMIT ? env.GIT_COMMIT.take(7) : 'latest'}"
-        DOCKER_IMAGE      = "${NEXUS_URL}/${NEXUS_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
-        DOCKER_IMAGE_LATEST = "${NEXUS_URL}/${NEXUS_REPO}/${IMAGE_NAME}:latest"
+        IMAGE_NAME = "myapp"
+        IMAGE_TAG  = "${env.BUILD_NUMBER}-${env.GIT_COMMIT ? env.GIT_COMMIT.take(7) : 'latest'}"
 
-        SONAR_PROJECT_KEY = 'my-app'
+        DOCKER_IMAGE        = "${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
+        DOCKER_IMAGE_LATEST = "${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:latest"
+
+        SONAR_PROJECT_KEY = "my-app"
         SONAR_HOST_URL    = "http://98.81.97.26:9000"
 
-        GIT_REPO_URL      = 'https://github.com/omkar0046/addressbook.git'
-        GIT_BRANCH        = 'master'
+        GIT_REPO_URL = "https://github.com/omkar0046/addressbook.git"
+        GIT_BRANCH   = "master"
     }
 
     parameters {
         choice(name: 'DEPLOY_ENV', choices: ['dev', 'qa', 'prod'], description: 'Select deployment environment')
-        booleanParam(name: 'SKIP_TESTS', defaultValue: true, description: 'Skip test execution')
         booleanParam(name: 'SKIP_SONAR', defaultValue: false, description: 'Skip SonarQube analysis')
-    }
-
-    options {
-        timeout(time: 30, unit: 'MINUTES')
-        disableConcurrentBuilds()
-        timestamps()
     }
 
     stages {
@@ -46,21 +39,19 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis (Fast Mode)') {
+        stage('SonarQube Analysis') {
             when { expression { !params.SKIP_SONAR } }
             steps {
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    sh '''
+                    sh """
                         ${SCANNER_HOME}/bin/sonar-scanner \
-                          -Dsonar.projectKey=my-app \
-                          -Dsonar.projectName=myapp \
-                          -Dsonar.sources=k8s \
-                          -Dsonar.inclusions=**/Dockerfile,**/Jenkinsfile,**/*.yaml \
-                          -Dsonar.exclusions=**/node_modules/**,**/target/**,**/.git/** \
-                          -Dsonar.host.url=http://98.81.97.26:9000 \
-                          -Dsonar.token=$SONAR_TOKEN \
-                          -Dsonar.sourceEncoding=UTF-8
-                    '''
+                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                        -Dsonar.projectName=myapp \
+                        -Dsonar.sources=k8s \
+                        -Dsonar.inclusions=**/*.yaml \
+                        -Dsonar.host.url=${SONAR_HOST_URL} \
+                        -Dsonar.token=${SONAR_TOKEN}
+                    """
                 }
             }
         }
@@ -68,7 +59,8 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh """
-                    docker build -t ${DOCKER_IMAGE} -t ${DOCKER_IMAGE_LATEST} .
+                    docker build -t ${DOCKER_IMAGE} \
+                                 -t ${DOCKER_IMAGE_LATEST} .
                 """
             }
         }
@@ -80,12 +72,12 @@ pipeline {
                     usernameVariable: 'NEXUS_USER',
                     passwordVariable: 'NEXUS_PASS'
                 )]) {
-                    sh '''
-                        echo "$NEXUS_PASS" | docker login 98.81.97.26:8081 -u "$NEXUS_USER" --password-stdin
+                    sh """
+                        echo "${NEXUS_PASS}" | docker login ${DOCKER_REGISTRY} -u "${NEXUS_USER}" --password-stdin
                         docker push ${DOCKER_IMAGE}
                         docker push ${DOCKER_IMAGE_LATEST}
-                        docker logout 98.81.97.26:8081
-                    '''
+                        docker logout ${DOCKER_REGISTRY}
+                    """
                 }
             }
         }
@@ -93,15 +85,11 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
-                    sh '''
-                        kubectl --kubeconfig=$KUBECONFIG_FILE create namespace ${DEPLOY_ENV} --dry-run=client -o yaml | kubectl --kubeconfig=$KUBECONFIG_FILE apply -f -
-
-                        sed -i "s|DOCKER_IMAGE_PLACEHOLDER|${DOCKER_IMAGE}|g" k8s/deployment.yaml
-
-                        kubectl --kubeconfig=$KUBECONFIG_FILE apply -f k8s/deployment.yaml -n ${DEPLOY_ENV}
-
-                        kubectl --kubeconfig=$KUBECONFIG_FILE rollout status deployment/myapp -n ${DEPLOY_ENV} --timeout=120s
-                    '''
+                    sh """
+                        kubectl --kubeconfig=${KUBECONFIG_FILE} set image deployment/myapp myapp=${DOCKER_IMAGE} -n ${params.DEPLOY_ENV} || true
+                        kubectl --kubeconfig=${KUBECONFIG_FILE} apply -f k8s/deployment.yaml -n ${params.DEPLOY_ENV}
+                        kubectl --kubeconfig=${KUBECONFIG_FILE} rollout status deployment/myapp -n ${params.DEPLOY_ENV} --timeout=120s
+                    """
                 }
             }
         }
@@ -109,20 +97,20 @@ pipeline {
 
     post {
         always {
-            sh '''
+            sh """
                 docker rmi ${DOCKER_IMAGE} 2>/dev/null || true
                 docker rmi ${DOCKER_IMAGE_LATEST} 2>/dev/null || true
-                docker image prune -f 2>/dev/null || true
-            '''
+                docker image prune -f || true
+            """
             cleanWs()
         }
 
         success {
-            echo "✅ FAST PIPELINE SUCCESS - Deployed to ${params.DEPLOY_ENV}"
+            echo "✅ PIPELINE SUCCESS"
         }
 
         failure {
-            echo "❌ Pipeline FAILED"
+            echo "❌ PIPELINE FAILED"
         }
     }
 }

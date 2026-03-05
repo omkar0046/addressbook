@@ -4,7 +4,7 @@ pipeline {
     environment {
         SCANNER_HOME = tool 'SonarScanner'
 
-        DOCKER_REGISTRY = "98.81.97.26:8081"
+        DOCKER_REGISTRY = "98.81.97.26:8082"
         DOCKER_REPO     = "docker-hosted"
 
         IMAGE_NAME = "myapp"

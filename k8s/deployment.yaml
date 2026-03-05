@@ -25,7 +25,8 @@ spec:
         fsGroup: 1000
       containers:
       - name: myapp
-        image: DOCKER_IMAGE_PLACEHOLDER
+        #image: DOCKER_IMAGE_PLACEHOLDER
+         image: IMAGE_PLACEHOLDER
         ports:
         - containerPort: 8080
           protocol: TCP

@@ -4,7 +4,7 @@ pipeline {
     environment {
         SCANNER_HOME = tool 'SonarScanner'
 
-        DOCKER_REGISTRY = "98.81.97.26:8082"
+        DOCKER_REGISTRY = "204.236.202.24:8082"
         DOCKER_REPO     = "docker-hosted"
 
         IMAGE_NAME = "myapp"
@@ -14,7 +14,7 @@ pipeline {
         DOCKER_IMAGE_LATEST = "${DOCKER_REGISTRY}/${DOCKER_REPO}/${IMAGE_NAME}:latest"
 
         SONAR_PROJECT_KEY = "my-app"
-        SONAR_HOST_URL    = "http://98.81.97.26:9000"
+        SONAR_HOST_URL    = "http://204.236.202.24:9000"
 
         GIT_REPO_URL = "https://github.com/omkar0046/addressbook.git"
         GIT_BRANCH   = "master"

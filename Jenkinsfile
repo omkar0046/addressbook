@@ -16,7 +16,7 @@ pipeline {
         SONAR_PROJECT_KEY = 'my-app'
         SONAR_HOST_URL    = "http://98.81.97.26:9000"
 
-        GIT_REPO_URL      = ''
+        GIT_REPO_URL      = 'https://github.com/omkar0046/addressbook.git'
         GIT_BRANCH        = 'master'
     }
 
@@ -57,7 +57,7 @@ pipeline {
                           -Dsonar.sources=k8s \
                           -Dsonar.inclusions=**/Dockerfile,**/Jenkinsfile,**/*.yaml \
                           -Dsonar.exclusions=**/node_modules/**,**/target/**,**/.git/** \
-                          -Dsonar.host.url=http://52.90.99.154:9000 \
+                          -Dsonar.host.url=http://98.81.97.26:9000 \
                           -Dsonar.token=$SONAR_TOKEN \
                           -Dsonar.sourceEncoding=UTF-8
                     '''
@@ -81,10 +81,10 @@ pipeline {
                     passwordVariable: 'NEXUS_PASS'
                 )]) {
                     sh '''
-                        echo "$NEXUS_PASS" | docker login 52.90.99.154:8082 -u "$NEXUS_USER" --password-stdin
+                        echo "$NEXUS_PASS" | docker login 98.81.97.26:8081 -u "$NEXUS_USER" --password-stdin
                         docker push ${DOCKER_IMAGE}
                         docker push ${DOCKER_IMAGE_LATEST}
-                        docker logout 52.90.99.154:8082
+                        docker logout 98.81.97.26:8081
                     '''
                 }
             }

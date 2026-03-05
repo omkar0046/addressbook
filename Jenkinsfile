@@ -87,17 +87,19 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
-            steps {
-                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
-                    sh """
-                        kubectl --kubeconfig=${KUBECONFIG_FILE} set image deployment/myapp myapp=${DOCKER_IMAGE} -n ${params.DEPLOY_ENV} || true
-                        kubectl --kubeconfig=${KUBECONFIG_FILE} apply -f k8s/deployment.yaml -n ${params.DEPLOY_ENV}
-                        kubectl --kubeconfig=${KUBECONFIG_FILE} rollout status deployment/myapp -n ${params.DEPLOY_ENV} --timeout=120s
-                    """
-                }
-            }
+       stage('Deploy to Kubernetes') {
+    steps {
+        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+            sh """
+                sed -i 's|IMAGE_PLACEHOLDER|${DOCKER_IMAGE}|g' k8s/deployment.yaml
+
+                kubectl --kubeconfig=${KUBECONFIG_FILE} apply -f k8s/deployment.yaml -n ${params.DEPLOY_ENV}
+
+                kubectl --kubeconfig=${KUBECONFIG_FILE} rollout status deployment/myapp -n ${params.DEPLOY_ENV} --timeout=180s
+            """
         }
+    }
+}
     }
 
     post {
